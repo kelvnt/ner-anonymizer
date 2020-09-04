@@ -28,20 +28,21 @@ class DataAnonymizer:
     Methods
     ----
     anonymize:
-        anonymize the dataset with the specified free text / categorical
-        columns. returns an anonymized dataset and a hash dictionary
+        Anonymize the dataset with the specified free text / categorical
+        columns. Returns an anonymized dataset and a hash dictionary.
     
     de_anonymize:
-        de-anonymize an anonymized dataset given the anonymized data and its
-        corresponding hash dictioanry. returns the de-anonymized version
-        of the dataset
+        De-anonymize the anonymized dataset using the generated anonymized
+        data and hash dictionary. This serves only as a quick visual
+        test of what de-anonymizing the data will look like.
     """
     def __init__(self, df):
         # type checking
         assert isinstance(df, pd.DataFrame), "df should be a pandas DataFrame"
         
         self.df = copy.deepcopy(df)
-        
+    
+    
     def anonymize(self,
                   free_text_columns=None,
                   free_text_additional_regex_to_hash=None,
@@ -81,12 +82,10 @@ class DataAnonymizer:
             
         Returns
         ----
-        df_: <pandas.DataFrame>
-            anonymized dataframe
-        
-        hash_dict: <dictionary>
-            dictionary with key as column name and value as a dictionary of
-            hash key to the original data
+        Returns a tuple of the below items, in order:
+        * pandas DataFrame of the anonymized dataframe
+        * hash dictionary with key as column name and value as a dictionary of
+          hash key to the original data
         """
         # type checking
         assert isinstance(free_text_columns, (list, type(None))),\
@@ -139,6 +138,9 @@ class DataAnonymizer:
                 _categorical_dict.update({col: d_})
                 
             hash_dict.update({"categorical": _categorical_dict})
+            
+        self.anonymized_df = df_
+        self.hash_dictionary = hash_dict
         
         return df_, hash_dict
     
@@ -223,6 +225,8 @@ class DataAnonymizer:
                 # Continue NER Prediction & Hashing
                 #----
                 words_to_anonymize = []
+                prev_i = -1
+                prev_label = "placeholder"
                 
                 # loop over every token prediction
                 for i, pred in enumerate(_preds):
@@ -236,22 +240,17 @@ class DataAnonymizer:
                         
                         # if consecutive tokens with same label, concat tokens
                         # else append token
-                        if len(words_to_anonymize) > 0:
-                            if ((i-1 == prev_i) & (label == prev_label)):
-                                words_to_anonymize[-1] = (
-                                    words_to_anonymize[-1] + " " + word 
-                                )
-                                prev_i = i
-                                prev_label = label
-                            else:
-                                words_to_anonymize.append(word)
-                                prev_i = i
-                                prev_label = label
+                        if ((i-1 == prev_i) & (label == prev_label)):
+                            words_to_anonymize[-1] = (
+                                words_to_anonymize[-1] + " " + word 
+                            )
+                            prev_i = i
+                            prev_label = label
                         else:
                             words_to_anonymize.append(word)
                             prev_i = i
                             prev_label = label
-                
+                                
                 for _word in words_to_anonymize:
                     _hash = hashlib.md5(str(_word).encode()).hexdigest()
                     if _hash not in hash_dict_:
@@ -266,6 +265,7 @@ class DataAnonymizer:
         return anonymized_data, hash_dict_
 
     
+    # this function is still experimental and does not work
     def _detokenize(self, tokens):
         """
         to-do:
@@ -286,6 +286,7 @@ class DataAnonymizer:
                 
         return restored_text
 
+    
     def _anonymize_categorical(self, l):
         """
         Args
@@ -304,36 +305,48 @@ class DataAnonymizer:
         return anonymized_data, hash_dict_
 
         
-    def de_anonymize(self, anonymized_df, hash_dictionary):
-        """
-        Args
-        ----
-        anonymized_df: <pandas.DataFrame>
-            dataframe of the anonymized data
-        
-        hash_dictionary: <dict>
-            dictionary consisting of key as column name and value as a 
-            dictionary of hash key to the original data
-            
+    def de_anonymize(self):
+        """ 
         Returns
         ----
-        df_: <pandas.DataFrame>
-            data frame containing the de-anonymized data
+        pandas DataFrame containing the de-anonymized data
         """
-        # type checking
-        assert isinstance(hash_dictionary, dict), "hash_dictionary should be of type dict"
-        
-        df_ = copy.deepcopy(anonymized_df)
-        
-        # de_anonymize free text columns
-        if "free_text" in hash_dictionary:
-            for col, _hash_dict in hash_dictionary["free_text"].items():
-                for _hash, _original in _hash_dict.items():
-                    df_[col] = df_[col].str.replace(_hash, _original)
-        
-        # de_anonymize categorical columns
-        if "categorical" in hash_dictionary:
-            for col, _hash_dict in hash_dictionary["categorical"].items():
-                df_[col] = df_[col].replace(_hash_dict)
-                
-        return df_
+        return de_anonymize_data(self.anonymized_df, self.hash_dictionary)
+
+
+def de_anonymize_data(anonymized_df, hash_dictionary):
+    """De-anonymize a dataframe given a corresponding hash dictionary
+    
+    Args
+    ----
+    anonymized_df: <pandas.DataFrame>
+        dataframe of the anonymized data
+
+    hash_dictionary: <dict>
+        dictionary consisting of key as column name and value as a 
+        dictionary of hash key to the original data
+
+    Returns
+    ----
+    pandas DataFrame containing the de-anonymized data
+    """
+    # type checking
+    assert isinstance(anonymized_df, (pd.DataFrame, type(None))),\
+        "anonymized_df should be a pandas DataFrame"
+    assert isinstance(hash_dictionary, (dict, type(None))),\
+        "hash_dictionary should be of type dict"
+
+    df_ = copy.deepcopy(anonymized_df)
+
+    # de_anonymize free text columns
+    if "free_text" in hash_dictionary:
+        for col, _hash_dict in hash_dictionary["free_text"].items():
+            for _hash, _original in _hash_dict.items():
+                df_[col] = df_[col].str.replace(_hash, _original)
+
+    # de_anonymize categorical columns
+    if "categorical" in hash_dictionary:
+        for col, _hash_dict in hash_dictionary["categorical"].items():
+            df_[col] = df_[col].replace(_hash_dict)
+
+    return df_
