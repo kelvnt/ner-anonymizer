@@ -282,7 +282,7 @@ class DataAnonymizer:
                 if (i+2)<len(tokens) and is_subtoken(tokens[i+2]):
                     restored_text[-1] = restored_text[-1] + tokens[i+2][2:]
             elif not is_subtoken(tokens[i]):
-                restored_text.append(tokens[i])
+                restored_text.append(tokenyous[i])
                 
         return restored_text
 
