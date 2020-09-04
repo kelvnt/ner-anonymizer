@@ -238,18 +238,17 @@ class DataAnonymizer:
                         # get original word
                         word = tokens[i].replace("##", "") # detokens[i]
                         
-                        # if consecutive tokens with same label, concat tokens
-                        # else append token
+                        # if consecutive tokens with same label, concat words
+                        # else append word
                         if ((i-1 == prev_i) & (label == prev_label)):
                             words_to_anonymize[-1] = (
                                 words_to_anonymize[-1] + " " + word 
                             )
-                            prev_i = i
-                            prev_label = label
                         else:
                             words_to_anonymize.append(word)
-                            prev_i = i
-                            prev_label = label
+                            
+                        prev_i = i
+                        prev_label = label
                                 
                 for _word in words_to_anonymize:
                     _hash = hashlib.md5(str(_word).encode()).hexdigest()
