@@ -258,7 +258,7 @@ class DataAnonymizer:
                 
                 anon_sentences.append(_sentence)
                 
-            anon_sentence = ". ".join(anon_sentences)
+            anon_sentence = ".".join(anon_sentences)
             anonymized_data.append(anon_sentence)
             
         return anonymized_data, hash_dict_
