@@ -299,7 +299,8 @@ class DataAnonymizer:
         for cat in l:
             _hash = hashlib.md5(str(cat).encode()).hexdigest()
             anonymized_data.append(_hash)
-            hash_dict_.update({_hash: cat})
+            if _hash not in hash_dict_:
+                hash_dict_.update({_hash: cat})
             
         return anonymized_data, hash_dict_
 
