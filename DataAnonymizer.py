@@ -18,7 +18,8 @@ class DataAnonymizer:
     similar process is repeated for categorical columns, without the use
     of NER.
     
-    Please use at your own risk, NER identification is not perfect.
+    Please use at your own risk, NER identification is not perfect, 
+    de-tokenizing is not perfect.
     
     Args
     ----
@@ -156,8 +157,8 @@ class DataAnonymizer:
             list of regex patterns to hash
             
         Notes:
-            * should save original word, not the token
-            * how to de-tokenize berttokenizer?
+            * Might there be a better way to detokenize tokens?
+              - https://github.com/huggingface/transformers/issues/36
         """
         label_list = self.label_list
         labels_to_anonymize = self.labels_to_anonymize
@@ -196,9 +197,6 @@ class DataAnonymizer:
                 outputs = model(inputs)[0]
                 _preds = torch.argmax(outputs, dim=2)[0].tolist()
                 
-                # detokenize tokens - need to detokenize better
-                # detokens = self._detokenize(tokens)
-                
                 #----
                 # Regex Hashing
                 #----
@@ -218,15 +216,12 @@ class DataAnonymizer:
                                 _sentence = _sentence.replace(_m, _hash)
                 
                 #----
-                # End Regex Hashing
+                # End Regex Hashing, Continue NER Prediction & Hashing
                 #----
                 
-                #----
-                # Continue NER Prediction & Hashing
-                #----
                 words_to_anonymize = []
                 prev_i = -1
-                prev_label = "placeholder"
+                prev_label = ""
                 
                 # loop over every token prediction
                 for i, pred in enumerate(_preds):
@@ -236,7 +231,7 @@ class DataAnonymizer:
                     # check if label should be anonymized
                     if label in labels_to_anonymize:
                         # get original word
-                        word = tokens[i].replace("##", "") # detokens[i]
+                        word = tokens[i] # detokens[i]
                         
                         # if consecutive tokens with same label, concat words
                         # else append word
@@ -251,10 +246,40 @@ class DataAnonymizer:
                         prev_label = label
                                 
                 for _word in words_to_anonymize:
-                    _hash = hashlib.md5(str(_word).encode()).hexdigest()
-                    if _hash not in hash_dict_:
-                        hash_dict_.update({_hash: _word})
-                    _sentence = _sentence.replace(_word, _hash)
+                    
+                    # attempt to "detokenize" word here by using
+                    # the tokens as a regex
+                    
+                    # remove ## & whitespaces and do a regex match with any 
+                    # \s\W in between any characters
+                    _regex = [c.lower() for c in re.sub("##| ", "", _word)]
+                    word_regex = "[\s\W]{0,1}".join(_regex)
+                    
+                    match = re.search(word_regex, _sentence,
+                                      flags=re.IGNORECASE)
+                    
+                    # there should only be one match
+                    if match:
+                        word = match[0]
+                           
+                        # hash the word
+                        _hash = hashlib.md5(str(word).encode()).hexdigest()
+                        
+                        # update hash dictionary
+                        if _hash not in hash_dict_:
+                            hash_dict_.update({_hash: word})
+                        
+                        # split by hashes to prevent parts of the hash from
+                        # being replaced
+                        _sen = re.split("("+ "|".join(hash_dict_.keys()) + ")",
+                                        _sentence)
+                        
+                        # replace non hash words
+                        _s = [s.replace(word, _hash) if s 
+                              not in hash_dict_.keys() else s for s in _sen]
+                        
+                        # recreate sentence
+                        _sentence = "".join(_s)
                 
                 anon_sentences.append(_sentence)
                 
@@ -262,28 +287,6 @@ class DataAnonymizer:
             anonymized_data.append(anon_sentence)
             
         return anonymized_data, hash_dict_
-
-    
-    # this function is still experimental and does not work
-    def _detokenize(self, tokens):
-        """
-        to-do:
-            * lengths does not match?
-            * no proper way to detokenize
-        """
-        
-        is_subtoken = lambda x: True if x[:2] == "##" else False
-
-        restored_text = []
-        for i in range(len(tokens)):
-            if not is_subtoken(tokens[i]) and (i+1)<len(tokens) and is_subtoken(tokens[i+1]):
-                restored_text.append(tokens[i] + tokens[i+1][2:])
-                if (i+2)<len(tokens) and is_subtoken(tokens[i+2]):
-                    restored_text[-1] = restored_text[-1] + tokens[i+2][2:]
-            elif not is_subtoken(tokens[i]):
-                restored_text.append(tokenyous[i])
-                
-        return restored_text
 
     
     def _anonymize_categorical(self, l):
