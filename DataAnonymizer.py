@@ -114,7 +114,6 @@ class DataAnonymizer:
         
         # hash the free text columns
         if free_text_columns is not None:
-            _free_text_dict = {}
             
             for col in free_text_columns:
                 
@@ -126,19 +125,14 @@ class DataAnonymizer:
                 
                 df_[col], d_ = self._anonymize_free_text(df_[col].tolist(),
                                                          regex)
-                _free_text_dict.update({col: d_})
-                
-            hash_dict.update({"free_text": _free_text_dict})
+                hash_dict.update({col: d_})
         
         # hash the categorical columns
         if categorical_columns is not None:
-            _categorical_dict = {}
             
             for col in categorical_columns:
                 df_[col], d_ = self._anonymize_categorical(df_[col].tolist())
-                _categorical_dict.update({col: d_})
-                
-            hash_dict.update({"categorical": _categorical_dict})
+                hash_dict.update({col: d_})
             
         self.anonymized_df = df_
         self.hash_dictionary = hash_dict
@@ -342,14 +336,8 @@ def de_anonymize_data(anonymized_df, hash_dictionary):
     df_ = copy.deepcopy(anonymized_df)
 
     # de_anonymize free text columns
-    if "free_text" in hash_dictionary:
-        for col, _hash_dict in hash_dictionary["free_text"].items():
-            for _hash, _original in _hash_dict.items():
-                df_[col] = df_[col].str.replace(_hash, _original)
-
-    # de_anonymize categorical columns
-    if "categorical" in hash_dictionary:
-        for col, _hash_dict in hash_dictionary["categorical"].items():
-            df_[col] = df_[col].replace(_hash_dict)
+    for col, _hash_dict in hash_dictionary.items():
+        for _hash, _original in _hash_dict.items():
+            df_[col] = df_[col].str.replace(_hash, _original)
 
     return df_
