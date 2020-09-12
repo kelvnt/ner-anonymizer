@@ -1,1 +1,1 @@
-from DataAnonymizer import *
+from .DataAnonymizer import *

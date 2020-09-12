@@ -16,7 +16,8 @@ setuptools.setup(
     install_requires=[
         "transformers>=3.0.0",
         "torch>=1.5.0",
-        "torchvision>=0.6.0"
+        "torchvision>=0.6.0",
+        "pandas>=1.0.0"
     ],
     python_requires=">=3.6.0"
 )
