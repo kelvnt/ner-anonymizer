@@ -1,4 +1,4 @@
 from .ner_anonymizer import (
-    DataAnonymizer
+    DataAnonymizer,
     de_anonymize_data
 )
