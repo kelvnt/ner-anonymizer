@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="DataAnonynmizer",
+    name="ner-anonymizer",
     version="0.1",
     author="Kelvin Tay",
     author_email="btkelvin@gmail.com",
