@@ -30,7 +30,7 @@ The package uses the NER model [dslim/bert-base-NER](https://huggingface.co/dsli
     )
 
     # to de-anonymize
-    de_anonymized_df = ner_anonymizer.de_anonymize_data(df, hash_dictionary)
+    de_anonymized_df = ner_anonymizer.de_anonymize_data(anonymized_df, hash_dictionary)
 
 You may specify for the argument `pretrained_model_name` any available pre-trained NER model from the [transformers](https://huggingface.co/transformers/) package in the links below (do note that you will need to specify the labels that the NER model uses, `label_list`, and from that list, the labels you want to anonymize, `labels_to_anonymize`):
 * https://huggingface.co/transformers/pretrained_models.html
