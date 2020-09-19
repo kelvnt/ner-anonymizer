@@ -1,4 +1,6 @@
 # NER Anonymizer
+[![PyPI version](https://badge.fury.io/py/ner-anonymizer.svg)](https://badge.fury.io/py/ner-anonymizer)
+
 This package contains some developmental tools to anonymize a pandas dataframe.
 
 NER Anonymizer contains a class `DataAnonymizer` which handles anonymization for both free text and categorical columns in a pandas dataframe:
@@ -23,14 +25,14 @@ The package uses the NER model [dslim/bert-base-NER](https://huggingface.co/dsli
         free_text_columns=["free_text_column_1", "free_text_column_2"],
         categorical_columns=["categorical_column_1"],
         pretrained_model_name="dslim/bert-base-NER",
-        label_list=["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"], # list of labels used in the specified pretrained NER model
-        labels_to_anonymize=["B-PER", "I-PER", "B-LOC", "I-LOC"] # list of labels to anonymize
+        label_list=["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"],
+        labels_to_anonymize=["B-PER", "I-PER", "B-LOC", "I-LOC"]
     )
 
     # to de-anonymize
     de_anonymized_df = ner_anonymizer.de_anonymize_data(df, hash_dictionary)
 
-You may specify for the argument `pretrained_model_name` any available pre-trained NER model from the [transformers](https://huggingface.co/transformers/) package in the links below (do note that you will need to specify the labels that the NER model uses, `label_list`, and from that list, the labels to be anonymized, `labels_to_anonymize`):
+You may specify for the argument `pretrained_model_name` any available pre-trained NER model from the [transformers](https://huggingface.co/transformers/) package in the links below (do note that you will need to specify the labels that the NER model uses, `label_list`, and from that list, the labels you want to anonymize, `labels_to_anonymize`):
 * https://huggingface.co/transformers/pretrained_models.html
 * https://huggingface.co/models
 
