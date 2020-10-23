@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ner-anonymizer",
-    version="0.1.4",
+    version="0.1.5",
     author="Kelvin Tay",
     author_email="btkelvin@gmail.com",
     description="Anonymizes pandas dataset and provides a hash dictionary to de-anonymize",
