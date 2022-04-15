@@ -20,13 +20,16 @@ The package uses the NER model [dslim/bert-base-NER](https://huggingface.co/dsli
     import ner_anonymizer
 
     # to anonymize
-    anonymizer = ner_anonymizer.DataAnoynmizer(df)
-    anonymized_df, hash_dictionary = anonymizer.anonymize(
-        free_text_columns=["free_text_column_1", "free_text_column_2"],
-        categorical_columns=["categorical_column_1"],
+    anonymizer = ner_anonymizer.DataAnoynmizer(
         pretrained_model_name="dslim/bert-base-NER",
         label_list=["O", "B-MISC", "I-MISC", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC"],
         labels_to_anonymize=["B-PER", "I-PER", "B-LOC", "I-LOC"]
+    )
+    anonymized_df, hash_dictionary = anonymizer.anonymize(
+        df=df,
+        free_text_columns=["free_text_column_1", "free_text_column_2"],
+        categorical_columns=["categorical_column_1"],
+        
     )
 
     # to de-anonymize

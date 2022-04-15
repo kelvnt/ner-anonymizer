@@ -5,7 +5,6 @@ import hashlib
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 import copy
 import re
-from tqdm import tqdm
 
 
 class DataAnonymizer:
@@ -24,8 +23,17 @@ class DataAnonymizer:
 
     Args
     ----
-    df: <pandas.DataFrame>
-        dataframe of the data to be anonymized
+    pretrained_model_name: <str>
+        name of pretrained model from the transformers package to use
+        for NER. Available model list below:
+        * https://huggingface.co/transformers/pretrained_models.html
+        * https://huggingface.co/models
+
+    label_list: <list of str>
+        label list used in the defined `pretrained_model_name`
+
+    labels_to_anonymize: <list of str>
+        list of entities in the defined `label_list` to be anonymized
 
     Methods
     ----
@@ -38,25 +46,45 @@ class DataAnonymizer:
         data and hash dictionary. This serves only as a quick visual
         test of what de-anonymizing the data will look like.
     """
-    def __init__(self, df):
-        # type checking
-        assert isinstance(df, pd.DataFrame), "df should be a pandas DataFrame"
+    def __init__(self, 
+                 pretrained_model_name="dslim/bert-base-NER",
+                 label_list=["O", "B-MISC", "I-MISC", "B-PER", "I-PER",
+                             "B-ORG", "I-ORG", "B-LOC", "I-LOC"],
+                 labels_to_anonymize=["B-PER", "I-PER", "B-LOC", "I-LOC"]):
 
-        self.df = copy.deepcopy(df)
+        assert isinstance(pretrained_model_name, str),\
+            "pretrained_model_name should be of type str"
+        assert isinstance(label_list, list),\
+            "label_list should be of type list"
+        assert isinstance(labels_to_anonymize, list),\
+            "labels_to_anonymize should be of type list"
+        assert set(labels_to_anonymize).issubset(set(label_list)),\
+            "elements in labels_to_anonymize should be in labels_list"
+
+        # load tokenizer and model
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name
+        )
+        self.model = AutoModelForTokenClassification.from_pretrained(
+            pretrained_model_name
+        )
+
+        self.label_list = label_list
+        self.labels_to_anonymize = labels_to_anonymize
 
 
     def anonymize(self,
+                  df,
                   free_text_columns=None,
                   free_text_additional_regex_to_hash=None,
-                  categorical_columns=None,
-                  pretrained_model_name="dslim/bert-base-NER",
-                  label_list=["O", "B-MISC", "I-MISC", "B-PER", "I-PER",
-                              "B-ORG", "I-ORG", "B-LOC", "I-LOC"],
-                  labels_to_anonymize=["B-PER", "I-PER", "B-LOC", "I-LOC"]
+                  categorical_columns=None
                  ):
         """
         Args
         ----
+        df: <pandas.DataFrame>
+            dataframe of the data to be anonymized
+
         free_text_columns: <list of str>
             list of column headers which contain free text columns to
             be anonymized
@@ -69,18 +97,6 @@ class DataAnonymizer:
         categorical_columns: <list of str>
             list of column headers which contain categorical columns to
             be anonymized
-
-        pretrained_model_name: <str>
-            name of pretrained model from the transformers package to use
-            for NER. Available model list below:
-            * https://huggingface.co/transformers/pretrained_models.html
-            * https://huggingface.co/models
-
-        label_list: <list of str>
-            label list used in the defined `pretrained_model_name`
-
-        labels_to_anonymize: <list of str>
-            list of entities in the defined `label_list` to be anonymized
 
         Returns
         ----
@@ -97,20 +113,9 @@ class DataAnonymizer:
             "free_text_additional_regex_to_hash should be of type dict"
         assert isinstance(categorical_columns, (list, type(None))),\
             "categorical_columns should be of type list"
-        assert isinstance(pretrained_model_name, str),\
-            "pretrained_model_name should be of type str"
-        assert isinstance(label_list, list),\
-            "label_list should be of type list"
-        assert isinstance(labels_to_anonymize, list),\
-            "labels_to_anonymize should be of type list"
-        assert set(labels_to_anonymize).issubset(set(label_list)),\
-            "elements in labels_to_anonymize should be in labels_list"
+        assert isinstance(df, pd.DataFrame), "df should be a pandas DataFrame"
 
-        self.label_list = label_list
-        self.labels_to_anonymize = labels_to_anonymize
-        self.pretrained_model_name = pretrained_model_name
-
-        df_ = copy.deepcopy(self.df)
+        df_ = copy.deepcopy(df)
         hash_dict = {}
 
         # hash the free text columns
@@ -135,7 +140,6 @@ class DataAnonymizer:
                 df_[col], d_ = self._anonymize_categorical(df_[col].tolist())
                 hash_dict.update({col: d_})
 
-        self.anonymized_df = df_
         self.hash_dictionary = hash_dict
 
         return df_, hash_dict
@@ -159,12 +163,8 @@ class DataAnonymizer:
         labels_to_anonymize = self.labels_to_anonymize
 
         # load tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained(
-            self.pretrained_model_name
-        )
-        model = AutoModelForTokenClassification.from_pretrained(
-            self.pretrained_model_name
-        )
+        tokenizer = self.tokenizer
+        model = self.model
 
         anonymized_data = []
         hash_dict_ = {}
@@ -303,13 +303,13 @@ class DataAnonymizer:
         return anonymized_data, hash_dict_
 
 
-    def de_anonymize(self):
+    def de_anonymize(self, anonymized_df):
         """
         Returns
         ----
         pandas DataFrame containing the de-anonymized data
         """
-        return de_anonymize_data(self.anonymized_df, self.hash_dictionary)
+        return de_anonymize_data(anonymized_df, self.hash_dictionary)
 
 
 def de_anonymize_data(anonymized_df, hash_dictionary):
